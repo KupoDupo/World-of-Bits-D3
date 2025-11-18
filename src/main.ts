@@ -127,6 +127,8 @@ function spawnCell(i: number, j: number) {
         icon: leaflet.divIcon({
           className: "token-label",
           html: `${token}`,
+          iconSize: [28, 28],
+          iconAnchor: [15.5, 15.5],
         }),
         interactive: false,
       })
@@ -168,6 +170,8 @@ function spawnCell(i: number, j: number) {
           icon: leaflet.divIcon({
             className: "token-label",
             html: `${cell.token}`,
+            iconSize: [28, 28],
+            iconAnchor: [14, 14],
           }),
           interactive: false,
         })
@@ -191,6 +195,8 @@ function spawnCell(i: number, j: number) {
           icon: leaflet.divIcon({
             className: "token-label",
             html: `${cell.token}`,
+            iconSize: [28, 28],
+            iconAnchor: [14, 14],
           }),
           interactive: false,
         })
