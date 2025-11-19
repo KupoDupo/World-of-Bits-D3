@@ -44,11 +44,11 @@ Can players simulate local movement and have the cells continue spawning on the 
 
 ### Steps
 
-- [ ] Create a new data type (an interface) for modeling cell grids independent of the representation of grid cells on the screen - can be structured as i,j pairs
-- [ ] The representation of grid cells should use an earth-spanning coordinate system anchored at Null Island (zero latitude, zero longitude)
-- [ ] Create functions (or methods on a class) for converting continous latitude-longitude pairs into cell identifiers and for converting cell identifiers into the top-left and bottom-right bounds of a cell in terms of latitude longitude
-- [ ] Let player us wasd or arrows keys to move around the map by one grid step
-- [ ] As the player moves, spawn and despawn cells as necessary to keep cells visible all the way out the edge of the map
-- [ ] Ensure that only cells near their current location are available for interaction as the player moves
-- [ ] Cells should be memoryless, they forget their state when they are no longer on the screen
-- [ ] Update highest token value to 128
+- [x] Create a new data type (an interface) for modeling cell grids independent of the representation of grid cells on the screen - can be structured as i,j pairs
+- [x] The representation of grid cells should use an earth-spanning coordinate system anchored at Null Island (zero latitude, zero longitude)
+- [x] Create functions (or methods on a class) for converting continous latitude-longitude pairs into cell identifiers and for converting cell identifiers into the top-left and bottom-right bounds of a cell in terms of latitude longitude
+- [x] Let player us wasd or arrows keys to move around the map by one grid step
+- [x] As the player moves, spawn and despawn cells as necessary to keep cells visible all the way out the edge of the map
+- [x] Ensure that only cells near their current location are available for interaction as the player moves
+- [x] Cells should be memoryless, they forget their state when they are no longer on the screen
+- [x] Update highest token value to 128

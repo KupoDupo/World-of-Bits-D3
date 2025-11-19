@@ -71,6 +71,12 @@ function updateStatus() {
 }
 updateStatus();
 
+// Interface for cell coordinates (independent of screen representation)
+interface CellId {
+  i: number;
+  j: number;
+}
+
 // A cell with optional token state
 type Cell = {
   i: number;
@@ -82,32 +88,40 @@ type Cell = {
 
 const cells = new Map<string, Cell>();
 
+// Null Island origin (0, 0) for earth-spanning coordinate system
+const _NULL_ISLAND = leaflet.latLng(0, 0);
+
 function cellKey(i: number, j: number) {
   return `${i},${j}`;
 }
 
-// Convert a latlng to local grid coordinates relative to CLASSROOM_LATLNG
-function latLngToCellIndices(latlng: leaflet.LatLng) {
-  const i = Math.floor((latlng.lat - CLASSROOM_LATLNG.lat) / TILE_DEGREES);
-  const j = Math.floor((latlng.lng - CLASSROOM_LATLNG.lng) / TILE_DEGREES);
+// Convert lat/lng to cell identifier using Null Island as anchor
+function latLngToCellId(latlng: leaflet.LatLng): CellId {
+  const i = Math.floor(latlng.lat / TILE_DEGREES);
+  const j = Math.floor(latlng.lng / TILE_DEGREES);
   return { i, j };
 }
 
+// Convert cell identifier to lat/lng bounds
+function cellIdToBounds(cellId: CellId): leaflet.LatLngBounds {
+  const { i, j } = cellId;
+  return leaflet.latLngBounds([
+    [i * TILE_DEGREES, j * TILE_DEGREES],
+    [(i + 1) * TILE_DEGREES, (j + 1) * TILE_DEGREES],
+  ]);
+}
+
 // Get center latlng for a cell
-function cellCenter(i: number, j: number) {
+function cellCenter(i: number, j: number): leaflet.LatLng {
   return leaflet.latLng(
-    CLASSROOM_LATLNG.lat + (i + 0.5) * TILE_DEGREES,
-    CLASSROOM_LATLNG.lng + (j + 0.5) * TILE_DEGREES,
+    (i + 0.5) * TILE_DEGREES,
+    (j + 0.5) * TILE_DEGREES,
   );
 }
 
 // Spawn a cell: rectangle and optional token label
 function spawnCell(i: number, j: number) {
-  const origin = CLASSROOM_LATLNG;
-  const bounds = leaflet.latLngBounds([
-    [origin.lat + i * TILE_DEGREES, origin.lng + j * TILE_DEGREES],
-    [origin.lat + (i + 1) * TILE_DEGREES, origin.lng + (j + 1) * TILE_DEGREES],
-  ]);
+  const bounds = cellIdToBounds({ i, j });
   const rect = leaflet.rectangle(bounds, {
     color: "#666",
     weight: 1,
@@ -140,7 +154,7 @@ function spawnCell(i: number, j: number) {
   refreshCellVisual(cell);
 
   rect.on("click", () => {
-    const playerCell = latLngToCellIndices(playerMarker.getLatLng());
+    const playerCell = latLngToCellId(playerMarker.getLatLng());
     const dist = Math.max(
       Math.abs(playerCell.i - i),
       Math.abs(playerCell.j - j),
@@ -205,9 +219,9 @@ function spawnCell(i: number, j: number) {
       playerInventory = null;
       updateStatus();
 
-      // congrats if token 16
-      if (newToken === 16) {
-        alert("🎉 Congratulations! You made a token of 16!");
+      // congrats if token reaches 128
+      if (newToken === 128) {
+        alert("🎉 Congratulations! You made a token of 128!");
       }
       return;
     }
@@ -219,7 +233,7 @@ function spawnCell(i: number, j: number) {
 
 // Update the cell rectangle style based on player distance
 function refreshCellVisual(cell: Cell) {
-  const playerCell = latLngToCellIndices(playerMarker.getLatLng());
+  const playerCell = latLngToCellId(playerMarker.getLatLng());
   const dist = Math.max(
     Math.abs(playerCell.i - cell.i),
     Math.abs(playerCell.j - cell.j),
@@ -233,6 +247,32 @@ function refreshCellVisual(cell: Cell) {
   }
 }
 
+// Despawn cells that are off-screen (memoryless behavior)
+function despawnCellsOutsideViewport() {
+  const bounds = map.getBounds();
+  const latMin = bounds.getSouth();
+  const latMax = bounds.getNorth();
+  const lngMin = bounds.getWest();
+  const lngMax = bounds.getEast();
+
+  const iMin = Math.floor(latMin / TILE_DEGREES) - 2;
+  const iMax = Math.floor(latMax / TILE_DEGREES) + 2;
+  const jMin = Math.floor(lngMin / TILE_DEGREES) - 2;
+  const jMax = Math.floor(lngMax / TILE_DEGREES) + 2;
+
+  const cellsToRemove: string[] = [];
+  cells.forEach((cell, key) => {
+    if (cell.i < iMin || cell.i > iMax || cell.j < jMin || cell.j > jMax) {
+      // Remove cell from map
+      if (cell.label) map.removeLayer(cell.label);
+      map.removeLayer(cell.rect);
+      cellsToRemove.push(key);
+    }
+  });
+
+  cellsToRemove.forEach((key) => cells.delete(key));
+}
+
 // Spawn cells to fill the current viewport
 function spawnCellsForViewport() {
   const bounds = map.getBounds();
@@ -242,10 +282,10 @@ function spawnCellsForViewport() {
   const lngMin = bounds.getWest();
   const lngMax = bounds.getEast();
 
-  const iMin = Math.floor((latMin - CLASSROOM_LATLNG.lat) / TILE_DEGREES) - 1;
-  const iMax = Math.floor((latMax - CLASSROOM_LATLNG.lat) / TILE_DEGREES) + 1;
-  const jMin = Math.floor((lngMin - CLASSROOM_LATLNG.lng) / TILE_DEGREES) - 1;
-  const jMax = Math.floor((lngMax - CLASSROOM_LATLNG.lng) / TILE_DEGREES) + 1;
+  const iMin = Math.floor(latMin / TILE_DEGREES) - 1;
+  const iMax = Math.floor(latMax / TILE_DEGREES) + 1;
+  const jMin = Math.floor(lngMin / TILE_DEGREES) - 1;
+  const jMax = Math.floor(lngMax / TILE_DEGREES) + 1;
 
   for (let i = iMin; i <= iMax; i++) {
     for (let j = jMin; j <= jMax; j++) {
@@ -255,17 +295,57 @@ function spawnCellsForViewport() {
   }
 }
 
-// Look around the player's neighborhood for caches to spawn
+// Keyboard movement function
+function movePlayer(di: number, dj: number) {
+  const currentPos = playerMarker.getLatLng();
+  const currentCell = latLngToCellId(currentPos);
+  const newCell = { i: currentCell.i + di, j: currentCell.j + dj };
+  const newPos = cellCenter(newCell.i, newCell.j);
+
+  playerMarker.setLatLng(newPos);
+  map.panTo(newPos);
+
+  // Refresh cell visuals and spawn/despawn cells
+  spawnCellsForViewport();
+  despawnCellsOutsideViewport();
+  cells.forEach((c) => refreshCellVisual(c));
+}
+
+// Keyboard event listener for WASD and arrow keys
+document.addEventListener("keydown", (event) => {
+  switch (event.key) {
+    case "w":
+    case "ArrowUp":
+      movePlayer(1, 0); // Move north (increase latitude)
+      break;
+    case "s":
+    case "ArrowDown":
+      movePlayer(-1, 0); // Move south (decrease latitude)
+      break;
+    case "a":
+    case "ArrowLeft":
+      movePlayer(0, -1); // Move west (decrease longitude)
+      break;
+    case "d":
+    case "ArrowRight":
+      movePlayer(0, 1); // Move east (increase longitude)
+      break;
+  }
+});
+
 // spawn initial set covering the viewport
 spawnCellsForViewport();
 
 // Rebuild cell visuals when the player moves
 playerMarker.on("dragend", () => {
+  spawnCellsForViewport();
+  despawnCellsOutsideViewport();
   cells.forEach((c) => refreshCellVisual(c));
 });
 
 // Recompute which cells we should show when the map moves / zooms
 map.on("moveend", () => {
   spawnCellsForViewport();
+  despawnCellsOutsideViewport();
   cells.forEach((c) => refreshCellVisual(c));
 });
