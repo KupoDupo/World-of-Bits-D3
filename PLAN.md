@@ -14,7 +14,8 @@ A map filled with tokens that players can merge together. Players can hold one t
 
 ## D3.a: Core mechanics (token collection and crafting)
 
-Key technical challenge: Can you assemble a map-based user interface using the Leaflet mapping framework?
+Focusing on core mechanics (token collection and crafting)\
+Key technical challenge: Can you assemble a map-based user interface using the Leaflet mapping framework?\
 Key gameplay challenge: Can players collect and craft tokens from nearby locations to finally make one of sufficiently high value?
 
 ### Steps for part a
@@ -40,7 +41,9 @@ Key gameplay challenge: Can players collect and craft tokens from nearby locatio
 
 ## D3.b
 
-Can players simulate local movement and have the cells continue spawning on the map as they move? Cells should be memoryless and the representation should be anchored at Null Island (zero latitude, zero longitude).
+Focusing on globe-spanning gameplay.\
+Key technical challenge: Can you set up your implementation to support gameplay anywhere in the real world, not just locations near our classroom?\
+Key gameplay challenge: Can players craft an even higher value token by moving to other locations to get access to additional crafting materials?
 
 ### Steps for Part b
 
@@ -55,12 +58,42 @@ Can players simulate local movement and have the cells continue spawning on the 
 
 ## D3.c
 
-Refactor/edit code to implement the Flyweight pattern to save memory when cells are not visible on the map. Use the Memento pattern to preserve the state of modified cells when players scroll off-screen, and restore them when they return to view. Actual gameplay changes should just be that cells appear to have a memory of their state that persists even when not visible on screen.
+Focusing on object (cell and token) persistence.\
+Key technical challenge: Can your software accurately remember the state of map cells even when they scroll off the screen?\
+Key gameplay challenge: Can you fix a gameplay bug where players can farm tokens by moving into and out of a region repeatedly to get access to fresh resources?
 
 ### Steps for part c
 
-- [ ] Apply the Flyweight pattern so cells not visible on the map do no require memory for storage if they have not been modified by the player
-- [ ] Apply the Memento pattern to preserve the state of modified cells when players scroll off-screen, and restore them when they return to view
-- [ ] After steps 1 and 2, ensure that cells have a memory of their state even when they are not visible on the map
-- [ ] Check code design and refactor if needed to ensure that the code is NOT using a design where you have a single data type that directly combines cell coordinates i, j with a token value TokenValue. If there is an instance like this, swap out for a Map that uses cells as keys and token as values
-- [ ] Check code design and refactor if needed to make sure that the display (of tokens on the map) is rebuilt from scratch with the previously stored data rather than trying to maintain player-visible objects on the screen when the map moves
+- [x] Apply the Flyweight pattern so cells not visible on the map do no require memory for storage if they have not been modified by the player
+- [x] Apply the Memento pattern to preserve the state of modified cells when players scroll off-screen, and restore them when they return to view
+- [x] After steps 1 and 2, ensure that cells have a memory of their state even when they are not visible on the map
+- [x] Check code design and refactor if needed to ensure that the code is NOT using a design where you have a single data type that directly combines cell coordinates i, j with a token value TokenValue. If there is an instance like this, swap out for a Map that uses cells as keys and token as values
+- [x] Check code design and refactor if needed to make sure that the display (of tokens on the map) is rebuilt from scratch with the previously stored data rather than trying to maintain player-visible objects on the screen when the map moves
+
+## D3.d
+
+Focusing on gameplay across real-world space and time.  
+Key technical challenges: Can your software remember game state even when the page is closed? Is the player character’s in-game movement controlled by the real-world geolocation of their device?\
+Key gameplay challenge: Can the user test the game with multiple gameplay sessions, some involving real-world movement and some involving simulated movement?
+
+### Steps for part d
+
+- [x] Implement a console with up, down, left, right buttons (by the points and inventory label) that players can use to move in case they don't have keys (to support gameplay on a mobile device)
+- [x] Implement on screen buttons (by points and inventory label) that lets players switch between button/key control and real world movement of their device (to be implemented in future steps)
+- [x] Implement across page persistence so that game state remains the same even if player closes the page and reopens it later, do this by using browser localStorage API
+- [x] Implement a start over/replay button (located in the same area as the above implementation) that lets players start the game over (new state)
+- [x] Linked to the real world movement control button, use the browser geolocation API to control player character movement instead of on screen buttons/keys
+- [x] Utilizing the Facade design pattern, make sure that implementation of this new player movement control system should be hidden behind an interface so that most of the game code does not depend on what moves the character
+- [x] Implement an html panel with two buttons - one for using keys to move and one for using geolocation
+- [x] Make sure there is a separate html panel with the up, down, left, right arrow keys for players to use if they don't have keys
+- [x] Place the above two steps/html elements below the map display
+- [x] Make sure that, for computer screens only, arrow buttons appear in the following order: up key (row 1) left key down key right key (row 2). For phone, leave in one column
+- [x] Make error messages, such as location error or no valid interaction here or too far, disappear after 4 seconds and revert back to points and inventory text
+
+## Ideas for further development
+
+- [ ] Night/Day Mode: Light and dark css with toggle in top right (over map)
+- [ ] "Mimic Tokens": Some tokens (maybe half a shade darker in bg coloring?) end up subtracting from user's total worth instead of adding
+- [ ] Sound effects
+- [ ] "Feisty Tokens": Special yellow tokens of greater worth (like a 16, separate from a 16 token the player makes themselves and places down) have a pop up with a little minigame that players have to win to collect it. Leaflet has a built in pop up that you can build inside of so use that and have the minigame be something simple
+- [ ] Refactor stinkiness!

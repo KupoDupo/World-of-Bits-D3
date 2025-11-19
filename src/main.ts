@@ -12,18 +12,65 @@ import "./_leafletWorkaround.ts"; // fixes for missing Leaflet images
 import luck from "./_luck.ts";
 
 // Create basic UI elements
+const bottomPanel = document.createElement("div");
+bottomPanel.id = "bottomPanel";
 
-const controlPanelDiv = document.createElement("div");
-controlPanelDiv.id = "controlPanel";
-document.body.append(controlPanelDiv);
+const statusPanelDiv = document.createElement("div");
+statusPanelDiv.id = "statusPanel";
+bottomPanel.appendChild(statusPanelDiv);
 
 const mapDiv = document.createElement("div");
 mapDiv.id = "map";
 document.body.append(mapDiv);
 
-const statusPanelDiv = document.createElement("div");
-statusPanelDiv.id = "statusPanel";
-document.body.append(statusPanelDiv);
+// Movement mode selection panel (below map)
+const movementModePanel = document.createElement("div");
+movementModePanel.id = "movementModePanel";
+
+const keyMovementButton = document.createElement("button");
+keyMovementButton.textContent = "🎮 Use Keys";
+keyMovementButton.id = "keyMovementButton";
+
+const geoMovementButton = document.createElement("button");
+geoMovementButton.textContent = "🚶 Use Geolocation";
+geoMovementButton.id = "geoMovementButton";
+
+const resetButton = document.createElement("button");
+resetButton.textContent = "🔄 Reset Game";
+
+movementModePanel.append(keyMovementButton, geoMovementButton, resetButton);
+bottomPanel.appendChild(movementModePanel);
+
+// Directional controls panel (below movement mode panel)
+const directionalPanel = document.createElement("div");
+directionalPanel.id = "directionalPanel";
+
+const upButton = document.createElement("button");
+upButton.textContent = "⬆️";
+const downButton = document.createElement("button");
+downButton.textContent = "⬇️";
+const leftButton = document.createElement("button");
+leftButton.textContent = "⬅️";
+const rightButton = document.createElement("button");
+rightButton.textContent = "➡️";
+
+// Row 1: Up button
+const row1 = document.createElement("div");
+row1.className = "button-row";
+row1.append(upButton);
+
+// Row 2: Left, Down, Right buttons
+const row2 = document.createElement("div");
+row2.className = "button-row";
+row2.append(leftButton, downButton, rightButton);
+
+directionalPanel.append(row1, row2);
+bottomPanel.appendChild(directionalPanel);
+document.body.append(bottomPanel);
+
+// Movement mode state
+let _useGeolocation = false;
+let geolocationWatchId: number | null = null;
 
 // Our classroom location
 const CLASSROOM_LATLNG = leaflet.latLng(
@@ -64,12 +111,44 @@ playerMarker.addTo(map);
 // Display the player's inventory and status
 const playerPoints = 0;
 let playerInventory: number | null = null;
+
+// Save game state to localStorage
+function saveGameState() {
+  const gameState = {
+    playerInventory,
+    playerPosition: {
+      lat: playerMarker.getLatLng().lat,
+      lng: playerMarker.getLatLng().lng,
+    },
+    cellMementos: Array.from(cellMementos.entries()),
+  };
+  localStorage.setItem("gameState", JSON.stringify(gameState));
+}
+
+// Timer for auto-dismissing error messages
+let errorMessageTimer: number | null = null;
+
 function updateStatus() {
   statusPanelDiv.innerHTML = `Points: ${playerPoints} <br/> Inventory: ${
     playerInventory ?? "empty"
   }`;
 }
-updateStatus();
+
+// Show a temporary error message that reverts after 4 seconds
+function showErrorMessage(message: string) {
+  statusPanelDiv.innerHTML = message;
+
+  // Clear any existing timer
+  if (errorMessageTimer !== null) {
+    clearTimeout(errorMessageTimer);
+  }
+
+  // Set new timer to revert to status after 4 seconds
+  errorMessageTimer = setTimeout(() => {
+    updateStatus();
+    errorMessageTimer = null;
+  }, 4000);
+}
 
 // Interface for cell coordinates (independent of screen representation)
 interface CellId {
@@ -98,6 +177,46 @@ const flyweightCells = new Map<string, Cell>();
 
 // Memento pattern: persistent storage for modified cells
 const cellMementos = new Map<string, CellMemento>();
+
+// Load game state from localStorage
+function loadGameState() {
+  const saved = localStorage.getItem("gameState");
+  if (saved) {
+    try {
+      const gameState = JSON.parse(saved);
+      playerInventory = gameState.playerInventory;
+
+      // Restore player position
+      if (gameState.playerPosition) {
+        const pos = leaflet.latLng(
+          gameState.playerPosition.lat,
+          gameState.playerPosition.lng,
+        );
+        playerMarker.setLatLng(pos);
+        map.setView(pos);
+      }
+
+      // Restore cell mementos
+      if (gameState.cellMementos) {
+        cellMementos.clear();
+        gameState.cellMementos.forEach(
+          ([key, memento]: [string, CellMemento]) => {
+            cellMementos.set(key, memento);
+          },
+        );
+      }
+
+      updateStatus();
+    } catch (e) {
+      console.error("Error loading game state:", e);
+      localStorage.removeItem("gameState");
+    }
+  }
+}
+
+// Load saved state on startup
+loadGameState();
+updateStatus();
 
 // Null Island origin (0, 0) for earth-spanning coordinate system
 const _NULL_ISLAND = leaflet.latLng(0, 0);
@@ -181,7 +300,7 @@ function spawnCell(i: number, j: number) {
       Math.abs(playerCell.j - j),
     );
     if (dist > 3) {
-      statusPanelDiv.innerHTML = "Too far — move closer to interact";
+      showErrorMessage("Too far — move closer to interact");
       return;
     }
 
@@ -195,6 +314,7 @@ function spawnCell(i: number, j: number) {
       }
       saveCellMemento(cell); // Save state after modification
       updateStatus();
+      saveGameState();
       return;
     }
 
@@ -215,6 +335,7 @@ function spawnCell(i: number, j: number) {
       playerInventory = null;
       saveCellMemento(cell); // Save state after modification
       updateStatus();
+      saveGameState();
       return;
     }
 
@@ -242,6 +363,7 @@ function spawnCell(i: number, j: number) {
       playerInventory = null;
       saveCellMemento(cell); // Save state after modification
       updateStatus();
+      saveGameState();
 
       // congrats if token reaches 128
       if (newToken === 128) {
@@ -251,7 +373,7 @@ function spawnCell(i: number, j: number) {
     }
 
     // Other interactions are intentionally limited
-    statusPanelDiv.innerHTML = "No valid interaction here";
+    showErrorMessage("No valid interaction here");
   });
 }
 
@@ -263,6 +385,7 @@ function saveCellMemento(cell: Cell) {
     j: cell.j,
     token: cell.token,
   });
+  saveGameState(); // Persist to localStorage
 }
 
 // Check if a cell has been modified from its original state
@@ -292,7 +415,7 @@ function refreshCellVisual(cell: Cell) {
 
   // If out-of-range, color light red, otherwise transparent
   if (dist > 3) {
-    cell.rect.setStyle({ fillColor: "#ffcccc", fillOpacity: 0.35 });
+    cell.rect.setStyle({ fillColor: "#febbbbff", fillOpacity: 0.5 });
   } else {
     cell.rect.setStyle({ fillColor: "#fff", fillOpacity: 0.0 });
   }
@@ -351,24 +474,55 @@ function spawnCellsForViewport() {
   }
 }
 
-// Keyboard movement function
+// Facade pattern: Movement control interface
+interface MovementController {
+  moveByOffset(di: number, dj: number): void;
+  moveToPosition(lat: number, lng: number): void;
+}
+
+class PlayerMovementFacade implements MovementController {
+  // Move player by grid offset (for manual/key control)
+  moveByOffset(di: number, dj: number): void {
+    const currentPos = playerMarker.getLatLng();
+    const currentCell = latLngToCellId(currentPos);
+    const newCell = { i: currentCell.i + di, j: currentCell.j + dj };
+    const newPos = cellCenter(newCell.i, newCell.j);
+    this.updatePlayerPosition(newPos);
+  }
+
+  // Move player to absolute position (for geolocation)
+  moveToPosition(lat: number, lng: number): void {
+    const newPos = leaflet.latLng(lat, lng);
+    this.updatePlayerPosition(newPos);
+  }
+
+  // Internal method to update position and refresh game state
+  private updatePlayerPosition(newPos: leaflet.LatLng): void {
+    playerMarker.setLatLng(newPos);
+    map.panTo(newPos);
+
+    // Refresh cell visuals and spawn/despawn cells
+    spawnCellsForViewport();
+    despawnCellsOutsideViewport();
+    flyweightCells.forEach((c) => refreshCellVisual(c));
+
+    saveGameState(); // Persist position changes
+  }
+}
+
+// Create movement controller instance
+const movementController = new PlayerMovementFacade();
+
+// Convenience function for backward compatibility
 function movePlayer(di: number, dj: number) {
-  const currentPos = playerMarker.getLatLng();
-  const currentCell = latLngToCellId(currentPos);
-  const newCell = { i: currentCell.i + di, j: currentCell.j + dj };
-  const newPos = cellCenter(newCell.i, newCell.j);
-
-  playerMarker.setLatLng(newPos);
-  map.panTo(newPos);
-
-  // Refresh cell visuals and spawn/despawn cells
-  spawnCellsForViewport();
-  despawnCellsOutsideViewport();
-  flyweightCells.forEach((c) => refreshCellVisual(c));
+  movementController.moveByOffset(di, dj);
 }
 
 // Keyboard event listener for WASD and arrow keys
 document.addEventListener("keydown", (event) => {
+  // Ignore keyboard input if geolocation mode is active
+  if (_useGeolocation) return;
+
   switch (event.key) {
     case "w":
     case "ArrowUp":
@@ -386,6 +540,114 @@ document.addEventListener("keydown", (event) => {
     case "ArrowRight":
       movePlayer(0, 1); // Move east (increase longitude)
       break;
+  }
+});
+
+// Button event listeners for directional movement
+upButton.addEventListener("click", () => {
+  if (!_useGeolocation) movePlayer(1, 0);
+});
+downButton.addEventListener("click", () => {
+  if (!_useGeolocation) movePlayer(-1, 0);
+});
+leftButton.addEventListener("click", () => {
+  if (!_useGeolocation) movePlayer(0, -1);
+});
+rightButton.addEventListener("click", () => {
+  if (!_useGeolocation) movePlayer(0, 1);
+});
+
+// Function to enable key/button movement mode
+function enableKeyMovement() {
+  _useGeolocation = false;
+  keyMovementButton.classList.add("active");
+  geoMovementButton.classList.remove("active");
+
+  // Enable manual controls
+  upButton.disabled = false;
+  downButton.disabled = false;
+  leftButton.disabled = false;
+  rightButton.disabled = false;
+
+  // Stop watching geolocation
+  if (geolocationWatchId !== null) {
+    navigator.geolocation.clearWatch(geolocationWatchId);
+    geolocationWatchId = null;
+  }
+}
+
+// Function to enable geolocation movement mode
+function enableGeoMovement() {
+  _useGeolocation = true;
+  geoMovementButton.classList.add("active");
+  keyMovementButton.classList.remove("active");
+
+  // Disable manual controls when using geolocation
+  upButton.disabled = true;
+  downButton.disabled = true;
+  leftButton.disabled = true;
+  rightButton.disabled = true;
+
+  // Start watching geolocation
+  if ("geolocation" in navigator) {
+    geolocationWatchId = navigator.geolocation.watchPosition(
+      (position) => {
+        // Use the facade to update player position
+        movementController.moveToPosition(
+          position.coords.latitude,
+          position.coords.longitude,
+        );
+      },
+      (error) => {
+        console.error("Geolocation error:", error);
+        showErrorMessage(`Location error: ${error.message}`);
+      },
+      {
+        enableHighAccuracy: true,
+        maximumAge: 0,
+        timeout: 5000,
+      },
+    );
+  } else {
+    alert("Geolocation is not supported by your browser");
+    enableKeyMovement();
+  }
+}
+
+// Set up event listeners for movement mode buttons
+keyMovementButton.addEventListener("click", enableKeyMovement);
+geoMovementButton.addEventListener("click", enableGeoMovement);
+
+// Initialize with key movement mode active
+keyMovementButton.classList.add("active");
+
+// Reset game state
+resetButton.addEventListener("click", () => {
+  if (
+    confirm(
+      "Are you sure you want to reset the game? This will clear all progress.",
+    )
+  ) {
+    // Clear localStorage
+    localStorage.removeItem("gameState");
+
+    // Reset game state
+    playerInventory = null;
+    cellMementos.clear();
+
+    // Reset player position
+    playerMarker.setLatLng(CLASSROOM_LATLNG);
+    map.setView(CLASSROOM_LATLNG);
+
+    // Clear and respawn cells
+    flyweightCells.forEach((cell) => {
+      if (cell.label) map.removeLayer(cell.label);
+      map.removeLayer(cell.rect);
+    });
+    flyweightCells.clear();
+    spawnCellsForViewport();
+
+    updateStatus();
   }
 });
 
