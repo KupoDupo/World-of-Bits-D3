@@ -1,23 +1,23 @@
 # D3: {World of Bits}
 
-# Game Design Vision
+## Game Design Vision
 
 A map filled with tokens that players can merge together. Players can hold one token at a time.
 
-# Technologies
+## Technologies
 
 - TypeScript for most game code, little to no explicit HTML, and all CSS collected in common `style.css` file
 - Deno and Vite for building
 - GitHub Actions + GitHub Pages for deployment automation
 
-# Assignments
+## Assignments
 
 ## D3.a: Core mechanics (token collection and crafting)
 
 Key technical challenge: Can you assemble a map-based user interface using the Leaflet mapping framework?
 Key gameplay challenge: Can players collect and craft tokens from nearby locations to finally make one of sufficiently high value?
 
-### Steps
+### Steps for part a
 
 - [x] copy main.ts to reference.ts for future reference
 - [x] delete everything in main.ts
@@ -42,7 +42,7 @@ Key gameplay challenge: Can players collect and craft tokens from nearby locatio
 
 Can players simulate local movement and have the cells continue spawning on the map as they move? Cells should be memoryless and the representation should be anchored at Null Island (zero latitude, zero longitude).
 
-### Steps
+### Steps for Part b
 
 - [x] Create a new data type (an interface) for modeling cell grids independent of the representation of grid cells on the screen - can be structured as i,j pairs
 - [x] The representation of grid cells should use an earth-spanning coordinate system anchored at Null Island (zero latitude, zero longitude)
