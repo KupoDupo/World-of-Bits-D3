@@ -86,7 +86,18 @@ type Cell = {
   token: number | null;
 };
 
-const cells = new Map<string, Cell>();
+// Memento: stores the state of modified cells
+interface CellMemento {
+  i: number;
+  j: number;
+  token: number | null;
+}
+
+// Flyweight pattern: only visible cells are stored here
+const flyweightCells = new Map<string, Cell>();
+
+// Memento pattern: persistent storage for modified cells
+const cellMementos = new Map<string, CellMemento>();
 
 // Null Island origin (0, 0) for earth-spanning coordinate system
 const _NULL_ISLAND = leaflet.latLng(0, 0);
@@ -128,11 +139,21 @@ function spawnCell(i: number, j: number) {
     fillOpacity: 0.0,
   }).addTo(map);
 
-  // deterministic spawn of a token
-  const hasToken = luck([i, j, "hasToken"].toString()) < 0.3;
-  const token = hasToken
-    ? [1, 2, 4][Math.floor(luck([i, j, "token"].toString()) * 3)]
-    : null;
+  // Check if there's a saved memento for this cell
+  const key = cellKey(i, j);
+  const memento = cellMementos.get(key);
+
+  let token: number | null;
+  if (memento !== undefined) {
+    // Restore from memento
+    token = memento.token;
+  } else {
+    // deterministic spawn of a token for unmodified cells
+    const hasToken = luck([i, j, "hasToken"].toString()) < 0.3;
+    token = hasToken
+      ? [1, 2, 4][Math.floor(luck([i, j, "token"].toString()) * 3)]
+      : null;
+  }
 
   let label: leaflet.Marker | undefined = undefined;
   if (token !== null) {
@@ -150,7 +171,7 @@ function spawnCell(i: number, j: number) {
   }
 
   const cell: Cell = { i, j, rect, label, token };
-  cells.set(cellKey(i, j), cell);
+  flyweightCells.set(key, cell);
   refreshCellVisual(cell);
 
   rect.on("click", () => {
@@ -172,6 +193,7 @@ function spawnCell(i: number, j: number) {
         map.removeLayer(cell.label);
         cell.label = undefined;
       }
+      saveCellMemento(cell); // Save state after modification
       updateStatus();
       return;
     }
@@ -191,6 +213,7 @@ function spawnCell(i: number, j: number) {
         })
         .addTo(map);
       playerInventory = null;
+      saveCellMemento(cell); // Save state after modification
       updateStatus();
       return;
     }
@@ -217,6 +240,7 @@ function spawnCell(i: number, j: number) {
         .addTo(map);
 
       playerInventory = null;
+      saveCellMemento(cell); // Save state after modification
       updateStatus();
 
       // congrats if token reaches 128
@@ -229,6 +253,33 @@ function spawnCell(i: number, j: number) {
     // Other interactions are intentionally limited
     statusPanelDiv.innerHTML = "No valid interaction here";
   });
+}
+
+// Mark a cell as modified and save its state to memento storage
+function saveCellMemento(cell: Cell) {
+  const key = cellKey(cell.i, cell.j);
+  cellMementos.set(key, {
+    i: cell.i,
+    j: cell.j,
+    token: cell.token,
+  });
+}
+
+// Check if a cell has been modified from its original state
+function isCellModified(cell: Cell): boolean {
+  // If there's already a memento, it's been modified
+  const key = cellKey(cell.i, cell.j);
+  if (cellMementos.has(key)) {
+    return true;
+  }
+
+  // Check if current state differs from what would be naturally spawned
+  const hasToken = luck([cell.i, cell.j, "hasToken"].toString()) < 0.3;
+  const naturalToken = hasToken
+    ? [1, 2, 4][Math.floor(luck([cell.i, cell.j, "token"].toString()) * 3)]
+    : null;
+
+  return cell.token !== naturalToken;
 }
 
 // Update the cell rectangle style based on player distance
@@ -247,7 +298,7 @@ function refreshCellVisual(cell: Cell) {
   }
 }
 
-// Despawn cells that are off-screen (memoryless behavior)
+// Despawn cells that are off-screen (with memento pattern for modified cells)
 function despawnCellsOutsideViewport() {
   const bounds = map.getBounds();
   const latMin = bounds.getSouth();
@@ -261,16 +312,21 @@ function despawnCellsOutsideViewport() {
   const jMax = Math.floor(lngMax / TILE_DEGREES) + 2;
 
   const cellsToRemove: string[] = [];
-  cells.forEach((cell, key) => {
+  flyweightCells.forEach((cell, key) => {
     if (cell.i < iMin || cell.i > iMax || cell.j < jMin || cell.j > jMax) {
-      // Remove cell from map
+      // Save memento if cell has been modified
+      if (isCellModified(cell)) {
+        saveCellMemento(cell);
+      }
+
+      // Remove cell from map (Flyweight pattern - unmodified cells don't persist)
       if (cell.label) map.removeLayer(cell.label);
       map.removeLayer(cell.rect);
       cellsToRemove.push(key);
     }
   });
 
-  cellsToRemove.forEach((key) => cells.delete(key));
+  cellsToRemove.forEach((key) => flyweightCells.delete(key));
 }
 
 // Spawn cells to fill the current viewport
@@ -290,7 +346,7 @@ function spawnCellsForViewport() {
   for (let i = iMin; i <= iMax; i++) {
     for (let j = jMin; j <= jMax; j++) {
       const key = cellKey(i, j);
-      if (!cells.has(key)) spawnCell(i, j);
+      if (!flyweightCells.has(key)) spawnCell(i, j);
     }
   }
 }
@@ -308,7 +364,7 @@ function movePlayer(di: number, dj: number) {
   // Refresh cell visuals and spawn/despawn cells
   spawnCellsForViewport();
   despawnCellsOutsideViewport();
-  cells.forEach((c) => refreshCellVisual(c));
+  flyweightCells.forEach((c) => refreshCellVisual(c));
 }
 
 // Keyboard event listener for WASD and arrow keys
@@ -340,12 +396,12 @@ spawnCellsForViewport();
 playerMarker.on("dragend", () => {
   spawnCellsForViewport();
   despawnCellsOutsideViewport();
-  cells.forEach((c) => refreshCellVisual(c));
+  flyweightCells.forEach((c) => refreshCellVisual(c));
 });
 
 // Recompute which cells we should show when the map moves / zooms
 map.on("moveend", () => {
   spawnCellsForViewport();
   despawnCellsOutsideViewport();
-  cells.forEach((c) => refreshCellVisual(c));
+  flyweightCells.forEach((c) => refreshCellVisual(c));
 });

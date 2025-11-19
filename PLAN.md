@@ -52,3 +52,15 @@ Can players simulate local movement and have the cells continue spawning on the 
 - [x] Ensure that only cells near their current location are available for interaction as the player moves
 - [x] Cells should be memoryless, they forget their state when they are no longer on the screen
 - [x] Update highest token value to 128
+
+## D3.c
+
+Refactor/edit code to implement the Flyweight pattern to save memory when cells are not visible on the map. Use the Memento pattern to preserve the state of modified cells when players scroll off-screen, and restore them when they return to view. Actual gameplay changes should just be that cells appear to have a memory of their state that persists even when not visible on screen.
+
+### Steps for part c
+
+- [ ] Apply the Flyweight pattern so cells not visible on the map do no require memory for storage if they have not been modified by the player
+- [ ] Apply the Memento pattern to preserve the state of modified cells when players scroll off-screen, and restore them when they return to view
+- [ ] After steps 1 and 2, ensure that cells have a memory of their state even when they are not visible on the map
+- [ ] Check code design and refactor if needed to ensure that the code is NOT using a design where you have a single data type that directly combines cell coordinates i, j with a token value TokenValue. If there is an instance like this, swap out for a Map that uses cells as keys and token as values
+- [ ] Check code design and refactor if needed to make sure that the display (of tokens on the map) is rebuilt from scratch with the previously stored data rather than trying to maintain player-visible objects on the screen when the map moves
