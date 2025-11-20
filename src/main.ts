@@ -116,13 +116,14 @@ playerMarker.bindTooltip("This is you!");
 playerMarker.addTo(map);
 
 // Display the player's inventory and status
-const playerPoints = 0;
+let highestTokenMerged = 0;
 let playerInventory: number | null = null;
 
 // Save game state to localStorage
 function saveGameState() {
   const gameState = {
     playerInventory,
+    highestTokenMerged,
     playerPosition: {
       lat: playerMarker.getLatLng().lat,
       lng: playerMarker.getLatLng().lng,
@@ -136,9 +137,10 @@ function saveGameState() {
 let errorMessageTimer: number | null = null;
 
 function updateStatus() {
-  statusPanelDiv.innerHTML = `Points: ${playerPoints} <br/> Inventory: ${
-    playerInventory ?? "empty"
-  }`;
+  statusPanelDiv.innerHTML =
+    `Highest Merged: ${highestTokenMerged} <br/> Inventory: ${
+      playerInventory ?? "empty"
+    }`;
 }
 
 // Show a temporary error message that reverts after 4 seconds
@@ -192,6 +194,7 @@ function loadGameState() {
     try {
       const gameState = JSON.parse(saved);
       playerInventory = gameState.playerInventory;
+      highestTokenMerged = gameState.highestTokenMerged || 0;
 
       // Restore player position
       if (gameState.playerPosition) {
@@ -350,6 +353,12 @@ function spawnCell(i: number, j: number) {
     if (playerInventory !== null && cell.token === playerInventory) {
       const newToken = playerInventory * 2;
       cell.token = newToken;
+
+      // Update highest token merged if this is a new record
+      if (newToken > highestTokenMerged) {
+        highestTokenMerged = newToken;
+      }
+
       // update label
       if (cell.label) {
         map.removeLayer(cell.label);
@@ -640,6 +649,7 @@ resetButton.addEventListener("click", () => {
 
     // Reset game state
     playerInventory = null;
+    highestTokenMerged = 0;
     cellMementos.clear();
 
     // Reset player position
