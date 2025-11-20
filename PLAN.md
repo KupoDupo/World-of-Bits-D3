@@ -98,3 +98,4 @@ Key gameplay challenge: Can the user test the game with multiple gameplay sessio
 - [ ] "Feisty Tokens": Special yellow tokens of greater worth (like a 16, separate from a 16 token the player makes themselves and places down) have a pop up with a little minigame that players have to win to collect it. Leaflet has a built in pop up that you can build inside of so use that and have the minigame be something simple
 - [ ] Refactor stinkiness!
 - [x] Remove drag (player marker can be dragged around to move right now - just get rid of this completely)
+- [ ] Update point system (idk what it's supposed to do exactly but let's just say it should record the highest token the player has merged)
