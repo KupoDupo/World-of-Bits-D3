@@ -104,8 +104,8 @@ leaflet
   .addTo(map);
 
 // Add a marker to represent the player
-const playerMarker = leaflet.marker(CLASSROOM_LATLNG, { draggable: true });
-playerMarker.bindTooltip("That's you! (drag to move)");
+const playerMarker = leaflet.marker(CLASSROOM_LATLNG, { draggable: false });
+playerMarker.bindTooltip("This is you!");
 playerMarker.addTo(map);
 
 // Display the player's inventory and status
