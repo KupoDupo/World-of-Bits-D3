@@ -5,6 +5,66 @@
   font-style: normal;
 }
 
+/* Light theme (default) */
+:root {
+  --bg-color: #ffffff;
+  --text-color: #000000;
+  --panel-bg: #f0f0f0;
+  --panel-bg-alt: #f8f8f8;
+  --border-color: #ccc;
+  --button-bg: white;
+  --button-border: #666;
+  --button-hover: #e0e0e0;
+  --active-bg: #4caf50;
+  --active-border: #45a049;
+  --token-bg: rgba(255, 255, 255, 0.95);
+  --token-border: #333;
+}
+
+/* Dark theme */
+body.dark-mode {
+  --bg-color: #1a1a1a;
+  --text-color: #ffffff;
+  --panel-bg: #2d2d2d;
+  --panel-bg-alt: #333333;
+  --border-color: #555;
+  --button-bg: #404040;
+  --button-border: #888;
+  --button-hover: #4a4a4a;
+  --active-bg: #45a049;
+  --active-border: #4caf50;
+  --token-bg: rgba(50, 50, 50, 0.95);
+  --token-border: rgb(150, 150, 150);
+}
+
+body {
+  background-color: var(--bg-color);
+  color: var(--text-color);
+  margin: 0;
+  padding: 0;
+  transition: background-color 0.3s, color 0.3s;
+}
+
+#themeToggle {
+  position: fixed;
+  top: 10px;
+  right: 10px;
+  z-index: 1000;
+  padding: 0.75rem 1rem;
+  font-size: 24px;
+  cursor: pointer;
+  border: 2px solid var(--button-border);
+  border-radius: 50%;
+  background-color: var(--button-bg);
+  transition: all 0.3s;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+}
+
+#themeToggle:hover {
+  background-color: var(--button-hover);
+  transform: scale(1.1);
+}
+
 #statusPanel {
   display: flex;
   font-size: 2rem;
@@ -24,7 +84,8 @@
   display: flex;
   flex-direction: row;
   width: 100%;
-  border-top: 2px solid #ccc;
+  border-top: 2px solid var(--border-color);
+  background-color: var(--panel-bg);
 }
 
 #movementModePanel {
@@ -32,8 +93,8 @@
   flex-direction: column;
   padding: 1rem;
   text-align: center;
-  background-color: #f0f0f0;
-  border-top: 2px solid #ccc;
+  background-color: var(--panel-bg);
+  border-top: 2px solid var(--border-color);
   width: 34vw;
 }
 
@@ -42,27 +103,28 @@
   padding: 0.75rem 1.5rem;
   font-size: 1rem;
   cursor: pointer;
-  border: 2px solid #666;
+  border: 2px solid var(--button-border);
   border-radius: 8px;
-  background-color: white;
+  background-color: var(--button-bg);
+  color: var(--text-color);
   transition: all 0.3s;
 }
 
 #movementModePanel button:hover {
-  background-color: #e0e0e0;
+  background-color: var(--button-hover);
 }
 
 #movementModePanel button.active {
-  background-color: #4caf50;
+  background-color: var(--active-bg);
   color: white;
-  border-color: #45a049;
+  border-color: var(--active-border);
 }
 
 #directionalPanel {
   padding: 1rem;
   text-align: center;
-  background-color: #f8f8f8;
-  border-top: 2px solid #ccc;
+  background-color: var(--panel-bg-alt);
+  border-top: 2px solid var(--border-color);
   width: 33vw;
   display: flex;
   flex-direction: column;
@@ -81,14 +143,15 @@
   padding: 1rem 1.5rem;
   font-size: 24px;
   cursor: pointer;
-  border: 2px solid #666;
+  border: 2px solid var(--button-border);
   border-radius: 8px;
-  background-color: white;
+  background-color: var(--button-bg);
+  color: var(--text-color);
   transition: all 0.3s;
 }
 
 #directionalPanel button:hover:not(:disabled) {
-  background-color: #e0e0e0;
+  background-color: var(--button-hover);
 }
 
 #directionalPanel button:disabled {
@@ -104,8 +167,8 @@
   text-align: center;
   font-size: 14px;
   font-weight: bold;
-  background: rgba(255, 255, 255, 0.95);
-  border: 2px solid #333;
+  background: var(--token-bg);
+  border: 2px solid var(--token-border);
   border-radius: 14px;
   box-shadow: 0 1px 2px rgba(0, 0, 0, 0.35);
   pointer-events: none; /* clicks should go to the rectangle */

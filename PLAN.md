@@ -92,6 +92,8 @@ Key gameplay challenge: Can the user test the game with multiple gameplay sessio
 
 ## Ideas for further development
 
+### Steps
+
 - [ ] Night/Day Mode: Light and dark css with toggle in top right (over map)
 - [ ] "Mimic Tokens": Some tokens (maybe half a shade darker in bg coloring?) end up subtracting from user's total worth instead of adding
 - [ ] Sound effects

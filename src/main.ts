@@ -23,6 +23,13 @@ const mapDiv = document.createElement("div");
 mapDiv.id = "map";
 document.body.append(mapDiv);
 
+// Night/Day mode toggle button (over map in top right)
+const themeToggle = document.createElement("button");
+themeToggle.id = "themeToggle";
+themeToggle.textContent = "🌙";
+themeToggle.title = "Toggle Night/Day Mode";
+document.body.append(themeToggle);
+
 // Movement mode selection panel (below map)
 const movementModePanel = document.createElement("div");
 movementModePanel.id = "movementModePanel";
@@ -650,6 +657,27 @@ resetButton.addEventListener("click", () => {
     updateStatus();
   }
 });
+
+// Night/Day mode toggle functionality
+function loadTheme() {
+  const savedTheme = localStorage.getItem("theme");
+  if (savedTheme === "dark") {
+    document.body.classList.add("dark-mode");
+    themeToggle.textContent = "☀️";
+  }
+}
+
+function toggleTheme() {
+  document.body.classList.toggle("dark-mode");
+  const isDark = document.body.classList.contains("dark-mode");
+  themeToggle.textContent = isDark ? "☀️" : "🌙";
+  localStorage.setItem("theme", isDark ? "dark" : "light");
+}
+
+themeToggle.addEventListener("click", toggleTheme);
+
+// Load theme on startup
+loadTheme();
 
 // spawn initial set covering the viewport
 spawnCellsForViewport();
